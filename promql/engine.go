@@ -1269,6 +1269,11 @@ func (ev *evaluator) eval(expr parser.Expr) (parser.Value, storage.Warnings) {
 
 	// Create a new span to help investigate inner evaluation performances.
 	ctxWithSpan, span := otel.Tracer("").Start(ev.ctx, stats.InnerEvalTime.SpanOperation()+" eval "+reflect.TypeOf(expr).String())
+	span.SetAttributes(
+		attribute.Int64("startTimestamp", ev.startTimestamp),
+		attribute.Int64("endTimestamp", ev.endTimestamp),
+		attribute.Int("numSteps", numSteps),
+	)
 	ev.ctx = ctxWithSpan
 	defer span.End()
 
