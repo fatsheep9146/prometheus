@@ -1061,13 +1061,20 @@ func (enh *EvalNodeHelper) DropMetricName(l labels.Labels) labels.Labels {
 // function call results.
 // The prepSeries function (if provided) can be used to prepare the helper
 // for each series, then passed to each call funcCall.
-func (ev *evaluator) rangeEval(prepSeries func(labels.Labels, *EvalSeriesHelper), funcCall func([]parser.Value, [][]EvalSeriesHelper, *EvalNodeHelper) (Vector, storage.Warnings), exprs ...parser.Expr) (Matrix, storage.Warnings) {
+func (ev *evaluator) rangeEval(
+	prepSeries func(labels.Labels, *EvalSeriesHelper),
+	funcCall func([]parser.Value, [][]EvalSeriesHelper, *EvalNodeHelper) (Vector, storage.Warnings),
+	exprs ...parser.Expr,
+) (Matrix, storage.Warnings) {
+	// 计算步长
 	numSteps := int((ev.endTimestamp-ev.startTimestamp)/ev.interval) + 1
+	// 每个 exprs 对应一个 Matrix，Matrix 是一组同指标名的 time series Matrix = []Series
 	matrixes := make([]Matrix, len(exprs))
 	origMatrixes := make([]Matrix, len(exprs))
 	originalNumSamples := ev.currentSamples
 
 	var warnings storage.Warnings
+	// 获取每个 expr eval 出来的原始数据
 	for i, e := range exprs {
 		// Functions will take string arguments from the expressions, not the values.
 		if e != nil && e.Type() != parser.ValueTypeString {
@@ -1083,6 +1090,7 @@ func (ev *evaluator) rangeEval(prepSeries func(labels.Labels, *EvalSeriesHelper)
 		}
 	}
 
+	// 只看某个 timestamp 的所有时序数据
 	vectors := make([]Vector, len(exprs))    // Input vectors for the function.
 	args := make([]parser.Value, len(exprs)) // Argument to function.
 	// Create an output vector that is as big as the input matrix with
@@ -1128,6 +1136,7 @@ func (ev *evaluator) rangeEval(prepSeries func(labels.Labels, *EvalSeriesHelper)
 		// Reset number of samples in memory after each timestamp.
 		ev.currentSamples = tempNumSamples
 		// Gather input vectors for this timestamp.
+		// 构造某个时间戳下所有指标的值，形成一个 Vectors 对象
 		for i := range exprs {
 			vectors[i] = vectors[i][:0]
 
